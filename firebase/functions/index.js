@@ -10,11 +10,11 @@ process.env.DEBUG = 'dialogflow:debug' // enables lib debugging statements
 
 var admin = require('firebase-admin')
 
-var { serviceAccountConfig } = require('../server/config/config')
+var serviceAccountConfig = require('./server/config/config.json')
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccountConfig),
-  databaseURL: serviceAccountConfig.db_url
+  databaseURL: 'https://udemy-demo-assistant-c107b.firebaseio.com'
 })
 
 exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
