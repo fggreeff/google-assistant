@@ -25,9 +25,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     )
     console.log('Dialogflow Request body: ' + JSON.stringify(request.body))
     console.log('Dialogflow intent: ' + agent.intent)
-    console.log(
-      'Dialogflow music parameters: ' + agent.parameters['music-artist']
-    )
+    console.log('Dialogflow music parameters: ' + agent.parameters['Singer'])
 
     function welcome(agent) {
       agent.add(`Welcome to my agent!`)
@@ -39,7 +37,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     }
 
     function voting(agent) {
-      agent.add(`Voting locally for ` + agent.parameters['music-artist'])
+      agent.add(`Voting locally for ` + agent.parameters['Singer'])
       //store votes to db
     }
 
