@@ -8,6 +8,15 @@ const { Card, Suggestion } = require('dialogflow-fulfillment')
 
 process.env.DEBUG = 'dialogflow:debug' // enables lib debugging statements
 
+var admin = require('firebase-admin')
+
+var { serviceAccountConfig } = require('../server/config/config')
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccountConfig),
+  databaseURL: serviceAccountConfig.db_url
+})
+
 exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
   (request, response) => {
     const agent = new WebhookClient({ request, response })
