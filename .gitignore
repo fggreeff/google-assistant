@@ -12,6 +12,9 @@ pids
 *.seed
 *.pid.lock
 
+# Ignore this file as others won't be working with the same projects 
+.firebaserc
+
 # Ignore Mac DS_Store files
 .DS_Store
 **/.DS_Store

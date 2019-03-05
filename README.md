@@ -1,11 +1,11 @@
 # google-assistant
 
-Demo app for GA and firebase-tools
+Demo voting app for GA and firebase-tools
 
 ## Getting started
 
+Ensure to create a project in firebase
 Clone repository
-
 Install packages
 
 Generate a [Firebase private key](https://documentation.onesignal.com/docs/generate-a-google-server-api-key) and store this inside `server/config/config.json`
