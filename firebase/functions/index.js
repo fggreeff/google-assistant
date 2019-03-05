@@ -172,6 +172,31 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       }
     }
 
+    async function selectByNumberMeetup(agent) {
+      if (checkIfGoogle(agent)) {
+        let option = agent.contexts.find(function(obj) {
+          return obj.name === 'actions.intent.option'
+        })
+        if (
+          option &&
+          option.hasOwnProperty('parameters') &&
+          option.parameters.hasOwnProperty('OPTION')
+        ) {
+          conv.data.meetupCount = parseInt(
+            option.parameters.OPTION.replace('meetup ', '')
+          )
+        }
+
+        let number = agent.parameters['number']
+        if (number.length > 0) {
+          conv.data.meetupCount = parseInt(number[0]) - 1
+        }
+
+        let response = await displayMeetup()
+        agent.add(response)
+      }
+    }
+
     function buildMeetupListResponse() {
       let responseToUser
 
@@ -353,6 +378,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('show meetups', showMeetups)
     intentMap.set('show meetups - next', nextMeetup)
     intentMap.set('show meetup list', listMeetups)
+    intentMap.set('show meetup list - select.number', selectByNumberMeetup)
 
     intentMap.set('your intent name here', yourFunctionHandler)
     intentMap.set('your intent name here', googleAssistantHandler)
