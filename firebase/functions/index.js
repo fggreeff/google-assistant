@@ -6,6 +6,7 @@ const config = require('./server/config/config')
 const functions = require('firebase-functions')
 const { WebhookClient } = require('dialogflow-fulfillment')
 const { Card, Suggestion } = require('dialogflow-fulfillment')
+const requestAPI = require('request-promise')
 
 if (!config.API_KEY_MEETUP) {
   throw new Error('Missing API_KEY_MEETUP')
@@ -32,6 +33,12 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     console.log('Dialogflow intent: ' + agent.intent)
     console.log('Dialogflow music parameters: ' + agent.parameters['Singer'])
 
+    let conv = agent.conv() // Get Actions on Google library conv instance
+
+    if (conv !== null && conv.data.meetupData === undefined) {
+      conv.data.meetupData = []
+    }
+
     function welcome(agent) {
       agent.add(`Welcome to my agent!`)
     }
@@ -39,6 +46,34 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     function fallback(agent) {
       agent.add(`I didn't understand`)
       agent.add(`I'm sorry, can you try again?`)
+    }
+
+    function showMeetups(agent) {
+      displayMeetup()
+    }
+
+    function displayMeetup() {
+      return requestAPI(
+        'https://api.meetup.com/find/upcoming_events?' +
+          '&sign=true&photo-host=public&lon=-0.057641&page=30&lat=51.528939&key=' +
+          config.API_KEY_MEETUP
+      )
+        .then(function(data) {
+          let meetups = JSON.parse(data)
+          if (meetups.hasOwnProperty('events')) {
+            saveData(meetups.events)
+          }
+        })
+        .catch(function(err) {
+          console.log('No meetups data')
+          console.log(err)
+        })
+    }
+
+    function saveData(data) {
+      if (conv !== null) {
+        conv.data.meetupData = data
+      }
     }
 
     async function voteResults(agent) {
@@ -74,8 +109,6 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     }
 
     function voting(agent) {
-      let conv = agent.conv() // Get Actions on Google library conv instance
-
       let endConversation = false
       let responseText = ''
       let singer = agent.parameters['Singer']
@@ -166,6 +199,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('Default Fallback Intent', fallback)
     intentMap.set('music vote', voting)
     intentMap.set('vote results', voteResults)
+    intentMap.set('show meetups', showMeetups)
 
     intentMap.set('your intent name here', yourFunctionHandler)
     intentMap.set('your intent name here', googleAssistantHandler)
