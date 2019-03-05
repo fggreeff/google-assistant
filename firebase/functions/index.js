@@ -3,6 +3,7 @@
 'use strict'
 
 const config = require('./server/config/config')
+const meetup_data = require('./server/config/data.json')
 const functions = require('firebase-functions')
 const { WebhookClient } = require('dialogflow-fulfillment')
 const { Card, Suggestion } = require('dialogflow-fulfillment')
@@ -72,7 +73,9 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
     async function displayMeetup() {
       if (conv.data.meetupData.length === 0) {
-        await getMeetupData()
+        console.log(getFakeMeetupData())
+
+        await getFakeMeetupData() //getMeetupData()
         return buildSingleMeetupResponse()
       } else {
         return buildSingleMeetupResponse()
@@ -118,6 +121,16 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
         }
       }
       return conv
+    }
+
+    function getFakeMeetupData() {
+      try {
+        let meetups = meetup_data
+        if (meetups.hasOwnProperty('events')) saveData(meetups.events)
+      } catch (err) {
+        console.log('No meetups data')
+        console.log(err)
+      }
     }
 
     function getMeetupData() {
