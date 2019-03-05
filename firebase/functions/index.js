@@ -7,7 +7,7 @@ const meetup_data = require('./server/config/data.json')
 const functions = require('firebase-functions')
 const { WebhookClient } = require('dialogflow-fulfillment')
 const { Card, Suggestion } = require('dialogflow-fulfillment')
-const { BasicCard, Button, Image } = require('actions-on-google')
+const { BasicCard, Button, Image, List } = require('actions-on-google')
 const requestAPI = require('request-promise')
 
 if (!config.API_KEY_MEETUP) {
@@ -64,6 +64,23 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       return isGoogle
     }
 
+    async function listMeetups(agent) {
+      if (checkIfGoogle(agent)) {
+        let response = await getMeetupList() // let's display first meetup
+        agent.add(response)
+      }
+    }
+
+    async function getMeetupList() {
+      conv.data.meetupCount = 0
+      if (conv.data.meetupData.length === 0) {
+        await getFakeMeetupData() // getMeetupData()
+        return buildMeetupListResponse()
+      } else {
+        return buildMeetupListResponse()
+      }
+    }
+
     async function showMeetups(agent) {
       if (checkIfGoogle(agent)) {
         let response = await displayMeetup() // let's display first meetup
@@ -73,8 +90,6 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
     async function displayMeetup() {
       if (conv.data.meetupData.length === 0) {
-        console.log(getFakeMeetupData())
-
         await getFakeMeetupData() //getMeetupData()
         return buildSingleMeetupResponse()
       } else {
@@ -155,6 +170,53 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       if (conv !== null) {
         conv.data.meetupData = data
       }
+    }
+
+    function buildMeetupListResponse() {
+      let responseToUser
+
+      if (conv.data.meetupData.length === 0) {
+        responseToUser = 'No meetups available at this time!'
+        conv.close(responseToUser)
+      } else {
+        let textList =
+          'This is a list of meetups. Please select one of them to proceed'
+
+        let image =
+          'https://raw.githubusercontent.com/jbergant/udemydemoimg/master/meetupS.png'
+        let items = {}
+        for (let i = 0; i < conv.data.meetupData.length; i++) {
+          let meetup = conv.data.meetupData[i]
+
+          items['meetup ' + i] = {
+            title: 'meetup ' + (i + 1),
+            description: meetup.name,
+            image: new Image({
+              url: image,
+              alt: meetup.name
+            })
+          }
+          if (i < 3) {
+            responseToUser += ' Meetup number ' + (i + 1) + ':'
+            responseToUser += meetup.name
+            responseToUser += ' by ' + meetup.group.name
+            let date = new Date(meetup.time)
+            responseToUser += ' on ' + date.toDateString() + '. '
+          }
+        }
+        conv.ask(textList)
+        conv.ask(responseToUser)
+
+        if (conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT')) {
+          conv.ask(
+            new List({
+              title: 'List of meetups: ',
+              items
+            })
+          )
+        }
+      }
+      return conv
     }
 
     async function nextMeetup(agent) {
@@ -290,6 +352,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('vote results', voteResults)
     intentMap.set('show meetups', showMeetups)
     intentMap.set('show meetups - next', nextMeetup)
+    intentMap.set('show meetup list', listMeetups)
 
     intentMap.set('your intent name here', yourFunctionHandler)
     intentMap.set('your intent name here', googleAssistantHandler)
