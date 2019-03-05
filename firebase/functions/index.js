@@ -52,7 +52,44 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       displayMeetup()
     }
 
-    function displayMeetup() {
+    async function showMeetups(agent) {
+      let response = await displayMeetup() // let's display first meetup
+      agent.add(response)
+    }
+
+    async function displayMeetup() {
+      if (conv.data.meetupData.length === 0) {
+        await getMeetupData()
+        return buildSingleMeetupResponse()
+      } else {
+        return buildSingleMeetupResponse()
+      }
+    }
+
+    function buildSingleMeetupResponse() {
+      let responseToUser
+      if (conv.data.meetupData.length === 0) {
+        responseToUser = 'No meetups available at this time!'
+        conv.ask(responseToUser)
+      } else {
+        let meetup = conv.data.meetupData[0]
+        responseToUser = ' Meetup number 1 '
+        responseToUser += meetup.name
+        responseToUser += ' by ' + meetup.group.name
+
+        let date = new Date(meetup.time)
+        responseToUser += ' on ' + date.toDateString() + '.'
+
+        conv.ask(responseToUser)
+
+        //Check if screen is avail
+        if (conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT')) {
+        }
+      }
+      return conv
+    }
+
+    function getMeetupData() {
       return requestAPI(
         'https://api.meetup.com/find/upcoming_events?' +
           '&sign=true&photo-host=public&lon=-0.057641&page=30&lat=51.528939&key=' +
