@@ -2,15 +2,20 @@
 // for Dialogflow fulfillment library docs, samples, and to report issues
 'use strict'
 
+const config = require('./server/config/config')
 const functions = require('firebase-functions')
 const { WebhookClient } = require('dialogflow-fulfillment')
 const { Card, Suggestion } = require('dialogflow-fulfillment')
+
+if (!config.API_KEY_MEETUP) {
+  throw new Error('Missing API_KEY_MEETUP')
+}
 
 process.env.DEBUG = 'dialogflow:debug' // enables lib debugging statements
 
 var admin = require('firebase-admin')
 
-var serviceAccountConfig = require('./server/config/config.json')
+var serviceAccountConfig = require('./server/config/google_config.json')
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccountConfig),
