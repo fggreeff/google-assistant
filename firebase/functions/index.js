@@ -40,6 +40,10 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       conv.data.meetupData = []
     }
 
+    if (conv !== null && conv.data.meetupCount === undefined) {
+      conv.data.meetupCount = 0
+    }
+
     function welcome(agent) {
       agent.add(`Welcome to my agent!`)
     }
@@ -80,9 +84,9 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       if (conv.data.meetupData.length === 0) {
         responseToUser = 'No meetups available at this time!'
         conv.ask(responseToUser)
-      } else {
-        let meetup = conv.data.meetupData[0]
-        responseToUser = ' Meetup number 1 '
+      } else if (conv.data.meetupCount < conv.data.meetupData.length) {
+        let meetup = conv.data.meetupData[conv.data.meetupCount]
+        responseToUser = ' Meetup number ' + (conv.data.meetupCount + 1) + ' '
         responseToUser += meetup.name
         responseToUser += ' by ' + meetup.group.name
 
@@ -137,6 +141,14 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     function saveData(data) {
       if (conv !== null) {
         conv.data.meetupData = data
+      }
+    }
+
+    async function nextMeetup(agent) {
+      if (checkIfGoogle(agent)) {
+        conv.data.meetupCount++
+        let response = await displayMeetup() // let's display first meetup
+        agent.add(response)
       }
     }
 
@@ -264,6 +276,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('music vote', voting)
     intentMap.set('vote results', voteResults)
     intentMap.set('show meetups', showMeetups)
+    intentMap.set('show meetups - next', nextMeetup)
 
     intentMap.set('your intent name here', yourFunctionHandler)
     intentMap.set('your intent name here', googleAssistantHandler)
