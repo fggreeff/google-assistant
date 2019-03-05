@@ -37,8 +37,54 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     }
 
     function voting(agent) {
-      agent.add(`Voting locally for ` + agent.parameters['Singer'])
-      //store votes to db
+      let conv = agent.conv() // Get Actions on Google library conv instance
+
+      let endConversation = false
+      let responseText = ''
+      let singer = agent.parameters['Singer']
+
+      if (singer !== '') {
+        let artistName = singer.replace(' ', '').toLowerCase()
+        let currentArtist = admin
+          .database()
+          .ref()
+          .child('/artists/' + artistName)
+
+        currentArtist.once('value', function(snapshot) {
+          if (snapshot.exists() && snapshot.hasChild('votes')) {
+            let obj = snapshot.val()
+            currentArtist.update({
+              votes: obj.votes + 1
+            })
+          } else {
+            currentArtist.set({
+              votes: 1,
+              name: singer
+            })
+          }
+        })
+        responseText = 'Thank you for voting!'
+      } else {
+        if (conv.data.voteFallback === undefined) {
+          conv.data.voteFallback = 0
+        }
+        conv.data.voteFallback++
+        if (conv.data.voteFallback > 2) {
+          responseText =
+            'Thank you for voting. Your vote was refused. Try again later.'
+          endConversation = true
+        } else {
+          console.log('fulfillmentText')
+          responseText = request.body.queryResult.fulfillmentText
+        }
+      }
+
+      if (endConversation) {
+        conv.close(responseText)
+      } else {
+        conv.ask(responseText)
+      }
+      agent.add(conv)
     }
 
     // Uncomment and edit to make your own intent handler
