@@ -1,3 +1,15 @@
+# google-assistant
+
+Demo app for GA and firebase-tools
+
+## Getting started
+
+Clone repository
+
+Install packages
+
+Generate a [Firebase private key](https://documentation.onesignal.com/docs/generate-a-google-server-api-key) and store this inside `server/config/config.json`
+
 Install firebase-tools
 `npm i firebase-tools -g`
 
@@ -7,9 +19,11 @@ Login to firebase
 Add your project
 `firebase use --add`
 
-Run `npm install` in your functions directory `cd functions` before deploying.
+# Deployment
 
-deploying functions
+Go to the functions directory `cd functions` and run `npm install` in your functions directory before deploying.
+
+Deploying functions
 `firebase deploy --only functions`
 
 # Dialogflow: Webhook Template using Node.js and Cloud Functions for Firebase
@@ -27,7 +41,8 @@ deploying functions
 4. Select _Intents_ from the left navigation menu. Select the `Default Welcome Intent` intent, scroll down to the end of the page and click _Fulfillment_, check _Use webhook_ and then click _Save_. This will allow you to have the welcome intent be a basic webhook intent to test.
 5. Build out your agent and business logic by adding function handlers for Dialogflow actions.
 
-Source:
-(actions-on-google-app-google-assistant)[https://www.udemy.com/actions-on-google-app-google-assistant/learn]
+## Source:
 
-(firebase-tools)[https://github.com/firebase/firebase-tools]
+[actions-on-google-app-google-assistant](https://www.udemy.com/actions-on-google-app-google-assistant/learn)
+
+[firebase-tools](https://github.com/firebase/firebase-tools)
