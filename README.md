@@ -8,7 +8,9 @@ Ensure to create a project in firebase
 Clone repository
 Install packages
 
-Generate a [Firebase private key](https://documentation.onesignal.com/docs/generate-a-google-server-api-key) and store this inside `server/config/config.json`
+Generate a [meetup key](https://secure.meetup.com/meetup_api/key/) and store this inside `server/config/config.json` as API_KEY_MEETUP
+
+Generate a [Firebase private key](https://documentation.onesignal.com/docs/generate-a-google-server-api-key) and store this inside `server/config/google_config.json`
 
 Install firebase-tools
 `npm i firebase-tools -g`

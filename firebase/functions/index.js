@@ -2,15 +2,22 @@
 // for Dialogflow fulfillment library docs, samples, and to report issues
 'use strict'
 
+const config = require('./server/config/config')
 const functions = require('firebase-functions')
 const { WebhookClient } = require('dialogflow-fulfillment')
 const { Card, Suggestion } = require('dialogflow-fulfillment')
+const { BasicCard, Button, Image } = require('actions-on-google')
+const requestAPI = require('request-promise')
+
+if (!config.API_KEY_MEETUP) {
+  throw new Error('Missing API_KEY_MEETUP')
+}
 
 process.env.DEBUG = 'dialogflow:debug' // enables lib debugging statements
 
 var admin = require('firebase-admin')
 
-var serviceAccountConfig = require('./server/config/config.json')
+var serviceAccountConfig = require('./server/config/google_config.json')
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccountConfig),
@@ -27,6 +34,12 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     console.log('Dialogflow intent: ' + agent.intent)
     console.log('Dialogflow music parameters: ' + agent.parameters['Singer'])
 
+    let conv = agent.conv() // Get Actions on Google library conv instance
+
+    if (conv !== null && conv.data.meetupData === undefined) {
+      conv.data.meetupData = []
+    }
+
     function welcome(agent) {
       agent.add(`Welcome to my agent!`)
     }
@@ -34,6 +47,97 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     function fallback(agent) {
       agent.add(`I didn't understand`)
       agent.add(`I'm sorry, can you try again?`)
+    }
+
+    function checkIfGoogle(agent) {
+      let isGoogle = true
+      if (conv === null) {
+        agent.add(`Only requests from Google Assistant are supported.
+          Find the <YOUR-ACTION> action on Google Assistant directory!`)
+        isGoogle = false
+      }
+      return isGoogle
+    }
+
+    async function showMeetups(agent) {
+      if (checkIfGoogle(agent)) {
+        let response = await displayMeetup() // let's display first meetup
+        agent.add(response)
+      }
+    }
+
+    async function displayMeetup() {
+      if (conv.data.meetupData.length === 0) {
+        await getMeetupData()
+        return buildSingleMeetupResponse()
+      } else {
+        return buildSingleMeetupResponse()
+      }
+    }
+
+    function buildSingleMeetupResponse() {
+      let responseToUser
+      if (conv.data.meetupData.length === 0) {
+        responseToUser = 'No meetups available at this time!'
+        conv.ask(responseToUser)
+      } else {
+        let meetup = conv.data.meetupData[0]
+        responseToUser = ' Meetup number 1 '
+        responseToUser += meetup.name
+        responseToUser += ' by ' + meetup.group.name
+
+        let date = new Date(meetup.time)
+        responseToUser += ' on ' + date.toDateString() + '.'
+
+        conv.ask(responseToUser)
+
+        //Check if screen is avail
+        if (conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT')) {
+          let image =
+            'https://raw.githubusercontent.com/jbergant/udemydemoimg/master/meetup.png'
+          conv.ask(
+            new BasicCard({
+              text: meetup.description,
+              subtitle: 'by ' + meetup.group.name,
+              title: meetup.name,
+              buttons: new Button({
+                title: 'Read more',
+                url: meetup.link
+              }),
+              image: new Image({
+                url: image,
+                alt: meetup.name
+              }),
+              display: 'CROPPED'
+            })
+          )
+        }
+      }
+      return conv
+    }
+
+    function getMeetupData() {
+      return requestAPI(
+        'https://api.meetup.com/find/upcoming_events?' +
+          '&sign=true&photo-host=public&lon=-0.057641&page=30&lat=51.528939&key=' +
+          config.API_KEY_MEETUP
+      )
+        .then(function(data) {
+          let meetups = JSON.parse(data)
+          if (meetups.hasOwnProperty('events')) {
+            saveData(meetups.events)
+          }
+        })
+        .catch(function(err) {
+          console.log('No meetups data')
+          console.log(err)
+        })
+    }
+
+    function saveData(data) {
+      if (conv !== null) {
+        conv.data.meetupData = data
+      }
     }
 
     async function voteResults(agent) {
@@ -69,8 +173,6 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     }
 
     function voting(agent) {
-      let conv = agent.conv() // Get Actions on Google library conv instance
-
       let endConversation = false
       let responseText = ''
       let singer = agent.parameters['Singer']
@@ -161,6 +263,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('Default Fallback Intent', fallback)
     intentMap.set('music vote', voting)
     intentMap.set('vote results', voteResults)
+    intentMap.set('show meetups', showMeetups)
 
     intentMap.set('your intent name here', yourFunctionHandler)
     intentMap.set('your intent name here', googleAssistantHandler)
