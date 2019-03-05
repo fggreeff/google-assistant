@@ -36,6 +36,38 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       agent.add(`I'm sorry, can you try again?`)
     }
 
+    async function voteResults(agent) {
+      let voteResultsRef = admin
+        .database()
+        .ref('artists')
+        .orderByChild('votes')
+
+      let results = []
+      await voteResultsRef
+        .once('value')
+        .then(function(snapshot) {
+          snapshot.forEach(function(childSnapshot) {
+            let childData = childSnapshot.val()
+            results.push(childData)
+          })
+        })
+        .then(function() {
+          results.reverse()
+        })
+
+      let textResponse = ''
+      for (let i = 0; i < results.length; i++) {
+        let text = i === 0 ? '' : ', '
+        text += results[i].name + ' has ' + results[i].votes
+        text += results[i].votes > 1 ? ' votes' : ' vote'
+        textResponse += text
+      }
+      textResponse = 'Vote results are ' + textResponse
+      console.log('This is it >>>: ' + textResponse)
+
+      agent.add(textResponse)
+    }
+
     function voting(agent) {
       let conv = agent.conv() // Get Actions on Google library conv instance
 
@@ -43,7 +75,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       let responseText = ''
       let singer = agent.parameters['Singer']
 
-      if (singer !== '') {
+      if (singer) {
         let artistName = singer.replace(' ', '').toLowerCase()
         let currentArtist = admin
           .database()
@@ -128,6 +160,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('Default Welcome Intent', welcome)
     intentMap.set('Default Fallback Intent', fallback)
     intentMap.set('music vote', voting)
+    intentMap.set('vote results', voteResults)
 
     intentMap.set('your intent name here', yourFunctionHandler)
     intentMap.set('your intent name here', googleAssistantHandler)
