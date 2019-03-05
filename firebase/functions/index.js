@@ -6,6 +6,7 @@ const config = require('./server/config/config')
 const functions = require('firebase-functions')
 const { WebhookClient } = require('dialogflow-fulfillment')
 const { Card, Suggestion } = require('dialogflow-fulfillment')
+const { BasicCard, Button, Image } = require('actions-on-google')
 const requestAPI = require('request-promise')
 
 if (!config.API_KEY_MEETUP) {
@@ -48,13 +49,21 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       agent.add(`I'm sorry, can you try again?`)
     }
 
-    function showMeetups(agent) {
-      displayMeetup()
+    function checkIfGoogle(agent) {
+      let isGoogle = true
+      if (conv === null) {
+        agent.add(`Only requests from Google Assistant are supported.
+          Find the <YOUR-ACTION> action on Google Assistant directory!`)
+        isGoogle = false
+      }
+      return isGoogle
     }
 
     async function showMeetups(agent) {
-      let response = await displayMeetup() // let's display first meetup
-      agent.add(response)
+      if (checkIfGoogle(agent)) {
+        let response = await displayMeetup() // let's display first meetup
+        agent.add(response)
+      }
     }
 
     async function displayMeetup() {
@@ -84,6 +93,24 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
         //Check if screen is avail
         if (conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT')) {
+          let image =
+            'https://raw.githubusercontent.com/jbergant/udemydemoimg/master/meetup.png'
+          conv.ask(
+            new BasicCard({
+              text: meetup.description,
+              subtitle: 'by ' + meetup.group.name,
+              title: meetup.name,
+              buttons: new Button({
+                title: 'Read more',
+                url: meetup.link
+              }),
+              image: new Image({
+                url: image,
+                alt: meetup.name
+              }),
+              display: 'CROPPED'
+            })
+          )
         }
       }
       return conv
