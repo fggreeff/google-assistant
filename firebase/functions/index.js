@@ -246,6 +246,14 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       return conv
     }
 
+    async function previousMeetup(agent) {
+      if (checkIfGoogle(agent)) {
+        conv.data.meetupCount--
+        let response = await displayMeetup()
+        agent.add(response)
+      }
+    }
+
     async function nextMeetup(agent) {
       if (checkIfGoogle(agent)) {
         conv.data.meetupCount++
@@ -346,6 +354,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('vote results', voteResults)
     intentMap.set('show meetups', showMeetups)
     intentMap.set('show meetups - next', nextMeetup)
+    intentMap.set('show meetups - previous', previousMeetup)
     intentMap.set('show meetup list', listMeetups)
     intentMap.set('show meetup list - select.number', selectByNumberMeetup)
 
