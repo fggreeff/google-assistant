@@ -255,7 +255,6 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
         if (conv.data.meetupCount > 0) {
           conv.data.meetupCount--
           response = await displayMeetup()
-          agent.add('The previous item is ')
         } else {
           response = 'You have reached the begining of the list'
         }
@@ -271,9 +270,9 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
           //hardcode to max of 2 meetups for now
           conv.data.meetupCount++
           response = await displayMeetup() // let's display first meetup
-          agent.add('The next item is ')
         } else {
-          response = 'You have reached the end of the list'
+          conv.close('You have reached the end of the list. Bye')
+          agent.add(conv)
         }
 
         agent.add(response)
