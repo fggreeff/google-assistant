@@ -3,10 +3,11 @@
 'use strict'
 
 const config = require('./server/config/config')
+const meetup_data = require('./server/config/data.json')
 const functions = require('firebase-functions')
 const { WebhookClient } = require('dialogflow-fulfillment')
 const { Card, Suggestion } = require('dialogflow-fulfillment')
-const { BasicCard, Button, Image } = require('actions-on-google')
+const { BasicCard, Button, Image, List } = require('actions-on-google')
 const requestAPI = require('request-promise')
 
 if (!config.API_KEY_MEETUP) {
@@ -40,6 +41,10 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       conv.data.meetupData = []
     }
 
+    if (conv !== null && conv.data.meetupCount === undefined) {
+      conv.data.meetupCount = 0
+    }
+
     function welcome(agent) {
       agent.add(`Welcome to my agent!`)
     }
@@ -59,6 +64,23 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       return isGoogle
     }
 
+    async function listMeetups(agent) {
+      if (checkIfGoogle(agent)) {
+        let response = await getMeetupList() // let's display first meetup
+        agent.add(response)
+      }
+    }
+
+    async function getMeetupList() {
+      conv.data.meetupCount = 0
+      if (conv.data.meetupData.length === 0) {
+        await getFakeMeetupData() // getMeetupData()
+        return buildMeetupListResponse()
+      } else {
+        return buildMeetupListResponse()
+      }
+    }
+
     async function showMeetups(agent) {
       if (checkIfGoogle(agent)) {
         let response = await displayMeetup() // let's display first meetup
@@ -68,7 +90,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
     async function displayMeetup() {
       if (conv.data.meetupData.length === 0) {
-        await getMeetupData()
+        await getFakeMeetupData() //getMeetupData()
         return buildSingleMeetupResponse()
       } else {
         return buildSingleMeetupResponse()
@@ -80,9 +102,9 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       if (conv.data.meetupData.length === 0) {
         responseToUser = 'No meetups available at this time!'
         conv.ask(responseToUser)
-      } else {
-        let meetup = conv.data.meetupData[0]
-        responseToUser = ' Meetup number 1 '
+      } else if (conv.data.meetupCount < conv.data.meetupData.length) {
+        let meetup = conv.data.meetupData[conv.data.meetupCount]
+        responseToUser = ' Meetup number ' + (conv.data.meetupCount + 1) + ' '
         responseToUser += meetup.name
         responseToUser += ' by ' + meetup.group.name
 
@@ -116,6 +138,16 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       return conv
     }
 
+    function getFakeMeetupData() {
+      try {
+        let meetups = meetup_data
+        if (meetups.hasOwnProperty('events')) saveData(meetups.events)
+      } catch (err) {
+        console.log('No meetups data')
+        console.log(err)
+      }
+    }
+
     function getMeetupData() {
       return requestAPI(
         'https://api.meetup.com/find/upcoming_events?' +
@@ -137,6 +169,86 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     function saveData(data) {
       if (conv !== null) {
         conv.data.meetupData = data
+      }
+    }
+
+    async function selectByNumberMeetup(agent) {
+      if (checkIfGoogle(agent)) {
+        let option = agent.contexts.find(function(obj) {
+          return obj.name === 'actions.intent.option'
+        })
+        if (
+          option &&
+          option.hasOwnProperty('parameters') &&
+          option.parameters.hasOwnProperty('OPTION')
+        ) {
+          conv.data.meetupCount = parseInt(
+            option.parameters.OPTION.replace('meetup ', '')
+          )
+        }
+
+        let number = agent.parameters['number']
+        if (number.length > 0) {
+          conv.data.meetupCount = parseInt(number[0]) - 1
+        }
+
+        let response = await displayMeetup()
+        agent.add(response)
+      }
+    }
+
+    function buildMeetupListResponse() {
+      let responseToUser
+
+      if (conv.data.meetupData.length === 0) {
+        responseToUser = 'No meetups available at this time!'
+        conv.close(responseToUser)
+      } else {
+        let textList =
+          'This is a list of meetups. Please select one of them to proceed'
+
+        let image =
+          'https://raw.githubusercontent.com/jbergant/udemydemoimg/master/meetupS.png'
+        let items = {}
+        for (let i = 0; i < conv.data.meetupData.length; i++) {
+          let meetup = conv.data.meetupData[i]
+
+          items['meetup ' + i] = {
+            title: 'meetup ' + (i + 1),
+            description: meetup.name,
+            image: new Image({
+              url: image,
+              alt: meetup.name
+            })
+          }
+          if (i < 3) {
+            responseToUser += ' Meetup number ' + (i + 1) + ':'
+            responseToUser += meetup.name
+            responseToUser += ' by ' + meetup.group.name
+            let date = new Date(meetup.time)
+            responseToUser += ' on ' + date.toDateString() + '. '
+          }
+        }
+        conv.ask(textList)
+        conv.ask(responseToUser)
+
+        if (conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT')) {
+          conv.ask(
+            new List({
+              title: 'List of meetups: ',
+              items
+            })
+          )
+        }
+      }
+      return conv
+    }
+
+    async function nextMeetup(agent) {
+      if (checkIfGoogle(agent)) {
+        conv.data.meetupCount++
+        let response = await displayMeetup() // let's display first meetup
+        agent.add(response)
       }
     }
 
@@ -264,6 +376,9 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('music vote', voting)
     intentMap.set('vote results', voteResults)
     intentMap.set('show meetups', showMeetups)
+    intentMap.set('show meetups - next', nextMeetup)
+    intentMap.set('show meetup list', listMeetups)
+    intentMap.set('show meetup list - select.number', selectByNumberMeetup)
 
     intentMap.set('your intent name here', yourFunctionHandler)
     intentMap.set('your intent name here', googleAssistantHandler)
