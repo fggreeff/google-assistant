@@ -280,6 +280,15 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       }
     }
 
+    async function repeatMeetup(agent) {
+      if (checkIfGoogle(agent)) {
+        let response = await displayMeetup()
+
+        agent.add("I'll repeat ")
+        agent.add(response)
+      }
+    }
+
     async function voteResults(agent) {
       let voteResultsRef = admin
         .database()
@@ -373,6 +382,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('show meetups', showMeetups)
     intentMap.set('show meetups - next', nextMeetup)
     intentMap.set('show meetups - previous', previousMeetup)
+    intentMap.set('show meetups - repeat', repeatMeetup)
     intentMap.set('show meetup list', listMeetups)
     intentMap.set('show meetup list - select.number', selectByNumberMeetup)
 
