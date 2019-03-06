@@ -28,11 +28,14 @@ admin.initializeApp({
 exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
   (request, response) => {
     const agent = new WebhookClient({ request, response })
+    console.log('>>>-----START------<<<')
+    /*
     console.log(
       'Dialogflow Request headers: ' + JSON.stringify(request.headers)
     )
     console.log('Dialogflow Request body: ' + JSON.stringify(request.body))
     console.log('Dialogflow intent: ' + agent.intent)
+    */
 
     let conv = agent.conv() // Get Actions on Google library conv instance
 
@@ -247,17 +250,32 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     }
 
     async function previousMeetup(agent) {
+      let response
       if (checkIfGoogle(agent)) {
-        conv.data.meetupCount--
-        let response = await displayMeetup()
+        if (conv.data.meetupCount > 0) {
+          conv.data.meetupCount--
+          response = await displayMeetup()
+          agent.add('The previous item is ')
+        } else {
+          response = 'You have reached the begining of the list'
+        }
         agent.add(response)
       }
     }
 
     async function nextMeetup(agent) {
+      let response
+
       if (checkIfGoogle(agent)) {
-        conv.data.meetupCount++
-        let response = await displayMeetup() // let's display first meetup
+        if (conv.data.meetupCount < 3) {
+          //hardcode to max of 2 meetups for now
+          conv.data.meetupCount++
+          response = await displayMeetup() // let's display first meetup
+          agent.add('The next item is ')
+        } else {
+          response = 'You have reached the end of the list'
+        }
+
         agent.add(response)
       }
     }
