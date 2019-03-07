@@ -77,10 +77,8 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       conv.data.meetupCount = 0
       if (conv.data.meetupData.length === 0) {
         await getFakeMeetupData() // getMeetupData()
-        return buildMeetupListResponse()
-      } else {
-        return buildMeetupListResponse()
       }
+      return buildMeetupListResponse()
     }
 
     async function showMeetups(agent) {
@@ -93,10 +91,8 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     async function displayMeetup() {
       if (conv.data.meetupData.length === 0) {
         await getFakeMeetupData() //getMeetupData()
-        return buildSingleMeetupResponse()
-      } else {
-        return buildSingleMeetupResponse()
       }
+      return buildSingleMeetupResponse()
     }
 
     function buildSingleMeetupResponse() {
@@ -251,40 +247,51 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
     async function previousMeetup(agent) {
       let response
-      if (checkIfGoogle(agent)) {
-        if (conv.data.meetupCount > 0) {
-          conv.data.meetupCount--
-          response = await displayMeetup()
-        } else {
-          response = 'You have reached the begining of the list'
+
+      try {
+        if (checkIfGoogle(agent)) {
+          if (conv.data.meetupCount > 0) {
+            conv.data.meetupCount--
+            response = await displayMeetup()
+          } else {
+            response =
+              'You have reached the begining of the list. I can repeat the event or move on to the next meetup event.'
+          }
+          agent.add(response)
         }
-        agent.add(response)
+      } catch (err) {
+        console.log('Error in previousMeetup: ' + err)
       }
     }
 
     async function nextMeetup(agent) {
       let response
-
-      if (checkIfGoogle(agent)) {
-        if (conv.data.meetupCount < 3) {
-          //hardcode to max of 2 meetups for now
-          conv.data.meetupCount++
-          response = await displayMeetup() // let's display first meetup
-        } else {
-          conv.close('You have reached the end of the list. Bye')
-          agent.add(conv)
+      try {
+        if (checkIfGoogle(agent)) {
+          if (conv.data.meetupCount < 1) {
+            //hardcode to max of 2 meetups for now, index starts 0
+            conv.data.meetupCount++
+            response = await displayMeetup() // let's display first meetup
+          } else {
+            conv.close('You have reached the end of the list. Goodbye')
+            agent.add(conv)
+          }
+          return agent.add(response)
         }
-
-        agent.add(response)
+      } catch (err) {
+        console.log('Error in nextMeetup: ' + err)
       }
     }
 
     async function repeatMeetup(agent) {
-      if (checkIfGoogle(agent)) {
-        let response = await displayMeetup()
+      try {
+        if (checkIfGoogle(agent)) {
+          let response = await displayMeetup()
 
-        agent.add("I'll repeat ")
-        agent.add(response)
+          agent.add(response)
+        }
+      } catch (err) {
+        console.log('Error in repeatMeetup: ' + err)
       }
     }
 
