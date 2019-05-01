@@ -149,16 +149,16 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     function getMeetupData() {
       return requestAPI(
         'https://api.meetup.com/find/upcoming_events?' +
-          '&sign=true&photo-host=public&lon=-0.057641&page=30&lat=51.528939&key=' +
-          config.API_KEY_MEETUP
+        '&sign=true&photo-host=public&lon=-0.057641&page=30&lat=51.528939&key=' +
+        config.API_KEY_MEETUP
       )
-        .then(function(data) {
+        .then(function (data) {
           let meetups = JSON.parse(data)
           if (meetups.hasOwnProperty('events')) {
             saveData(meetups.events)
           }
         })
-        .catch(function(err) {
+        .catch(function (err) {
           console.log('No meetups data')
           console.log(err)
         })
@@ -172,7 +172,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
     async function selectByNumberMeetup(agent) {
       if (checkIfGoogle(agent)) {
-        let option = agent.contexts.find(function(obj) {
+        let option = agent.contexts.find(function (obj) {
           return obj.name === 'actions.intent.option'
         })
 
@@ -304,13 +304,13 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       let results = []
       await voteResultsRef
         .once('value')
-        .then(function(snapshot) {
-          snapshot.forEach(function(childSnapshot) {
+        .then(function (snapshot) {
+          snapshot.forEach(function (childSnapshot) {
             let childData = childSnapshot.val()
             results.push(childData)
           })
         })
-        .then(function() {
+        .then(function () {
           results.reverse()
         })
 
@@ -339,7 +339,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
           .ref()
           .child('/artists/' + artistName)
 
-        currentArtist.once('value', function(snapshot) {
+        currentArtist.once('value', function (snapshot) {
           if (snapshot.exists() && snapshot.hasChild('votes')) {
             let obj = snapshot.val()
             currentArtist.update({
