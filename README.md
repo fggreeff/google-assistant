@@ -23,7 +23,7 @@ Add your project
 
 # Deployment
 
-Go to the functions directory `cd functions` and run `npm install` in your functions directory before deploying.
+Navigate to the functions directory `cd functions` and run `npm install` in your functions directory before deploying.
 
 Deploying functions
 `firebase deploy --only functions`

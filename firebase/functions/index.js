@@ -28,12 +28,14 @@ admin.initializeApp({
 exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
   (request, response) => {
     const agent = new WebhookClient({ request, response })
+    console.log('>>>-----START------<<<')
+    /*
     console.log(
       'Dialogflow Request headers: ' + JSON.stringify(request.headers)
     )
     console.log('Dialogflow Request body: ' + JSON.stringify(request.body))
     console.log('Dialogflow intent: ' + agent.intent)
-    console.log('Dialogflow music parameters: ' + agent.parameters['Singer'])
+    */
 
     let conv = agent.conv() // Get Actions on Google library conv instance
 
@@ -75,10 +77,8 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       conv.data.meetupCount = 0
       if (conv.data.meetupData.length === 0) {
         await getFakeMeetupData() // getMeetupData()
-        return buildMeetupListResponse()
-      } else {
-        return buildMeetupListResponse()
       }
+      return buildMeetupListResponse()
     }
 
     async function showMeetups(agent) {
@@ -91,10 +91,8 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     async function displayMeetup() {
       if (conv.data.meetupData.length === 0) {
         await getFakeMeetupData() //getMeetupData()
-        return buildSingleMeetupResponse()
-      } else {
-        return buildSingleMeetupResponse()
       }
+      return buildSingleMeetupResponse()
     }
 
     function buildSingleMeetupResponse() {
@@ -151,16 +149,16 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     function getMeetupData() {
       return requestAPI(
         'https://api.meetup.com/find/upcoming_events?' +
-          '&sign=true&photo-host=public&lon=-0.057641&page=30&lat=51.528939&key=' +
-          config.API_KEY_MEETUP
+        '&sign=true&photo-host=public&lon=-0.057641&page=30&lat=51.528939&key=' +
+        config.API_KEY_MEETUP
       )
-        .then(function(data) {
+        .then(function (data) {
           let meetups = JSON.parse(data)
           if (meetups.hasOwnProperty('events')) {
             saveData(meetups.events)
           }
         })
-        .catch(function(err) {
+        .catch(function (err) {
           console.log('No meetups data')
           console.log(err)
         })
@@ -174,14 +172,17 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
     async function selectByNumberMeetup(agent) {
       if (checkIfGoogle(agent)) {
-        let option = agent.contexts.find(function(obj) {
+        let option = agent.contexts.find(function (obj) {
           return obj.name === 'actions.intent.option'
         })
+
+        //I don't think the code ever reaches this if-statement below
         if (
           option &&
           option.hasOwnProperty('parameters') &&
           option.parameters.hasOwnProperty('OPTION')
         ) {
+          console.log('>>>> selected option value: ', option.parameters.OPTION) // is the selected option value
           conv.data.meetupCount = parseInt(
             option.parameters.OPTION.replace('meetup ', '')
           )
@@ -244,11 +245,53 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       return conv
     }
 
+    async function previousMeetup(agent) {
+      let response
+
+      try {
+        if (checkIfGoogle(agent)) {
+          if (conv.data.meetupCount > 0) {
+            conv.data.meetupCount--
+            response = await displayMeetup()
+          } else {
+            response =
+              'You have reached the begining of the list. I can repeat the event or move on to the next meetup event.'
+          }
+          agent.add(response)
+        }
+      } catch (err) {
+        console.log('Error in previousMeetup: ' + err)
+      }
+    }
+
     async function nextMeetup(agent) {
-      if (checkIfGoogle(agent)) {
-        conv.data.meetupCount++
-        let response = await displayMeetup() // let's display first meetup
-        agent.add(response)
+      let response
+      try {
+        if (checkIfGoogle(agent)) {
+          if (conv.data.meetupCount < 1) {
+            //hardcode to max of 2 meetups for now, index starts 0
+            conv.data.meetupCount++
+            response = await displayMeetup() // let's display first meetup
+          } else {
+            conv.close('You have reached the end of the list. Goodbye')
+            agent.add(conv)
+          }
+          return agent.add(response)
+        }
+      } catch (err) {
+        console.log('Error in nextMeetup: ' + err)
+      }
+    }
+
+    async function repeatMeetup(agent) {
+      try {
+        if (checkIfGoogle(agent)) {
+          let response = await displayMeetup()
+
+          agent.add(response)
+        }
+      } catch (err) {
+        console.log('Error in repeatMeetup: ' + err)
       }
     }
 
@@ -261,13 +304,13 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       let results = []
       await voteResultsRef
         .once('value')
-        .then(function(snapshot) {
-          snapshot.forEach(function(childSnapshot) {
+        .then(function (snapshot) {
+          snapshot.forEach(function (childSnapshot) {
             let childData = childSnapshot.val()
             results.push(childData)
           })
         })
-        .then(function() {
+        .then(function () {
           results.reverse()
         })
 
@@ -296,7 +339,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
           .ref()
           .child('/artists/' + artistName)
 
-        currentArtist.once('value', function(snapshot) {
+        currentArtist.once('value', function (snapshot) {
           if (snapshot.exists() && snapshot.hasChild('votes')) {
             let obj = snapshot.val()
             currentArtist.update({
@@ -333,39 +376,6 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       agent.add(conv)
     }
 
-    // Uncomment and edit to make your own intent handler
-    // uncomment `intentMap.set('your intent name here', yourFunctionHandler);
-    // below to get this function to be run when a Dialogflow intent is matched
-    function yourFunctionHandler(agent) {
-      agent.add(
-        `This message is from Dialogflow's Cloud Functions for Firebase editor!`
-      )
-      agent.add(
-        new Card({
-          title: `Title: this is a card title`,
-          imageUrl:
-            'https://developers.google.com/actions/images/badges/XPM_BADGING_GoogleAssistant_VER.png',
-          text: `This is the body text of a card.  You can even use line\n  breaks and emoji! 💁`,
-          buttonText: 'This is a button',
-          buttonUrl: 'https://assistant.google.com/'
-        })
-      )
-      agent.add(new Suggestion(`Quick Reply`))
-      agent.add(new Suggestion(`Suggestion`))
-      agent.setContext({
-        name: 'weather',
-        lifespan: 2,
-        parameters: { city: 'Rome' }
-      })
-    }
-    // Uncomment and edit to make your own Google Assistant intent handler
-    // uncomment `intentMap.set('your intent name here', googleAssistantHandler);`
-    // below to get this function to be run when a Dialogflow intent is matched
-    function googleAssistantHandler(agent) {
-      let conv = agent.conv() // Get Actions on Google library conv instance
-      conv.ask('Hello from the Actions on Google client library!') // Use Actions on Google library
-      agent.add(conv) // Add Actions on Google library responses to your agent's response
-    }
     // See https://github.com/dialogflow/dialogflow-fulfillment-nodejs/tree/master/samples/actions-on-google
     // for a complete Dialogflow fulfillment library Actions on Google client library v2 integration sample
 
@@ -377,11 +387,11 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('vote results', voteResults)
     intentMap.set('show meetups', showMeetups)
     intentMap.set('show meetups - next', nextMeetup)
+    intentMap.set('show meetups - previous', previousMeetup)
+    intentMap.set('show meetups - repeat', repeatMeetup)
     intentMap.set('show meetup list', listMeetups)
     intentMap.set('show meetup list - select.number', selectByNumberMeetup)
 
-    intentMap.set('your intent name here', yourFunctionHandler)
-    intentMap.set('your intent name here', googleAssistantHandler)
     agent.handleRequest(intentMap)
   }
 )
