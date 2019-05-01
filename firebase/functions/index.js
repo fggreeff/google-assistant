@@ -99,7 +99,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       let responseToUser
       if (conv.data.meetupData.length === 0) {
         responseToUser = 'No meetups available at this time!'
-        conv.ask(responseToUser)
+        conv.close(responseToUser)
       } else if (conv.data.meetupCount < conv.data.meetupData.length) {
         let meetup = conv.data.meetupData[conv.data.meetupCount]
         responseToUser = ' Meetup number ' + (conv.data.meetupCount + 1) + ' '
@@ -391,6 +391,11 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set('show meetups - repeat', repeatMeetup)
     intentMap.set('show meetup list', listMeetups)
     intentMap.set('show meetup list - select.number', selectByNumberMeetup)
+    intentMap.set('show meetup list - select.number - next', nextMeetup)
+    intentMap.set('show meetup list - select.number - previous', previousMeetup)
+    intentMap.set('show meetup list - select.number - repeat', repeatMeetup)
+
+
 
     agent.handleRequest(intentMap)
   }
